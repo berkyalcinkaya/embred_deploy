@@ -15,6 +15,9 @@ from tqdm import tqdm
 
 available_models = list(mapping.keys())
 
+class_mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3", 
+           5: "t4", 6: "t5", 7: "t6", 8: "t7", 9: "t8", 10: "tM", 11: "tB", 12: "tEB"}
+
 SIZE = (224, 224)
 NCLASS = 13
 RCNN_PATH = os.path.join(MODELS_DIR, "rcnn.pt")
@@ -69,7 +72,7 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
     if map_output or output_to_str:
         output = torch.argmax(output).item()
         if output_to_str:
-            output = mapping[output]
+            output = class_mapping[output]
     
     return output
 
@@ -210,9 +213,8 @@ if __name__ == "__main__":
             print(f"Failed to load image at {args.single_image}")
             exit(1)
         duplicated_image = cv2.cvtColor(single_image, cv2.COLOR_GRAY2RGB)
-        depths_ims = [duplicated_image, duplicated_image, duplicated_image]
         # For single image we still map output to class label
-        output = inference(model, get_device(), depths_ims, rcnn_model=rcnn_model, output_to_str=True)
+        output = inference(model, get_device(), duplicated_image.transpose(2,0,1), rcnn_model=rcnn_model, output_to_str=True)
         print(f"Class label: {output}")
     else:
         # Three separate images: all three paths must be provided.

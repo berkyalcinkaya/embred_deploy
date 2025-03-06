@@ -1,166 +1,126 @@
-
-# Image Inference Script
+# embpred_deploy Documentation
 
 ## Overview
 
-This script (`inf.py`) allows users to perform image classification using a pre-trained model. It supports two modes of operation:
+`embpred_deploy` is a deployment package for running inference using **Faster-RCNN and custom classification networks**. It supports various input modes, including **timelapse inference**, **single-image inference**, and **multi-focal depth inference**.
 
-1. **Single Image Mode**: Provide a single grayscale image, which is duplicated across three focal depths.
-2. **Multiple Images Mode**: Provide three separate images corresponding to different focal depths: `F-15`, `F0`, and `F15`.
 
-The script utilizes a Faster R-CNN model for object detection and a custom neural network (`BiggerNet3D224`) for classification.
+## Installation
 
-## Table of Contents
+### 1. Create and activate a Conda environment with Python 3.12
 
-- [Prerequisites](#prerequisites)
-- [Usage](#usage)
-  - [Single Image Mode](#single-image-mode)
-  - [Multiple Images Mode](#multiple-images-mode)
-- [Inference Function](#inference-function)
-  - [Function Signature](#function-signature)
-  - [Parameters](#parameters)
-  - [Returns](#returns)
-  - [Example Usage](#example-usage)
-- [Model Files](#model-files)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
-
-## Prerequisites
-
-- **Operating System**: macOS
-- **Python Version**: 3.7 or higher
-- **Hardware**: GPU (optional, for faster inference)
-
-## Usage
-
-### Single Image Mode
-
-Allows the user to provide a single grayscale image. The script duplicates this image across three channels to create an RGB image for inference.
+To ensure compatibility, create a new Conda environment:
 
 ```bash
-python inf.py --single-image path/to/image.jpg
+conda create -n embd python=3.12
+conda activate embd
 ```
 
-**Example:**
+### 2. Install `embpred_deploy` via pip
+
+Once the environment is set up, install the package:
 
 ```bash
-python inf.py --single-image ./images/sample_grayscale.jpg
+pip install embpred_deploy
 ```
 
-### Multiple Images Mode
 
-Allows the user to provide three separate images corresponding to different focal depths: `F-15`, `F0`, and `F15`.
+## Model Weights Installation
+
+Pretrained model weights are stored on Google Drive. To use the latest trained models, download the weight files from:
+
+[Google Drive Weights](https://drive.google.com/file/d/1bf7vCVUbkREmODBsdFPL7yA6ypg95tRT/view?usp=sharing)
+
+### Install Weights
+
+After downloading the zip file, run the installation script to extract and move the weight files into the appropriate `models` folder:
 
 ```bash
-python inf.py --F_neg15 path/to/F_neg15.jpg --F0 path/to/F0.jpg --F15 path/to/F15.jpg
+python -m embpred_deploy.install_weights /path/to/your/downloaded_weights.zip
 ```
 
-**Example:**
+This script:
+- Unzips the archive
+- Moves any `.pth` or `.pt` files to the `models` directory
+
+## Usage Instructions
+
+The inference script supports three modes:
+
+
+### 1. **Timelapse Inference**
+
+Use the `--timelapse-dir` argument to process a sequence of images. This mode supports two directory structures:
+
+- **Single-image per timepoint**  
+  - All images are stored in one directory.
+  - Each image is loaded in grayscale and converted to RGB (duplicated channels).
+  
+- **Multiple focal depths per timepoint**  
+  - The images must be organized into **three subdirectories**, each representing a different focal depth.
+  - The script aligns images based on sorted filenames across subdirectories.
+
+#### Example Command:
 
 ```bash
-python inf.py --F_neg15 ./images/F_neg15.jpg --F0 ./images/F0.jpg --F15 ./images/F15.jpg
+python -m embpred_deploy.main --timelapse-dir /path/to/your/timelapse_data --model-name YOUR_MODEL_NAME
 ```
 
-**Note:** You must provide either the `--single-image` argument or all three of `--F_neg15`, `--F0`, and `--F15`. These options are mutually exclusive.
+#### Output:
+- Raw outputs: `raw_timelapse_outputs.npy`
+- If `--postprocess` is enabled:
+  - `max_prob_classes.csv`
+  - `max_prob_classes.png`
 
-## Inference Function
 
-The `inference` function is responsible for processing the input images and returning the classification result.
+### 2. **Single Image Inference**
 
-### Function Signature
+Use the `--single-image` argument to run inference on a single image. The image is processed by duplicating its grayscale channel into RGB.
 
-```python
-def inference(
-    model,
-    device,
-    depths_ims: Union[List[np.ndarray], torch.Tensor, np.ndarray],
-    map_output=True,
-    output_to_str=False,
-    totensor=True,
-    resize=True,
-    normalize=True,
-    get_bbox=True,
-    rcnn_model=None,
-    size=(224, 224)
-):
-    ...
+#### Example Command:
+
+```bash
+python -m embpred_deploy.main --single-image /path/to/your/image.jpg --model-name YOUR_MODEL_NAME
 ```
 
-### Parameters
 
-- **model** (`torch.nn.Module`): The pre-trained classification model.
-- **device** (`torch.device`): The device (`cpu` or `cuda`) on which computations will be performed.
-- **depths_ims** (`List[np.ndarray] | torch.Tensor | np.ndarray`): A list of three images corresponding to different focal depths.
-- **map_output** (`bool`, optional): If `True`, maps the output class index to its label using the `mapping` dictionary. Default is `True`.
-- **output_to_str** (`bool`, optional): If `True`, returns the class label as a string. Default is `False`.
-- **totensor** (`bool`, optional): If `True`, converts the image to a PyTorch tensor. Default is `True`.
-- **resize** (`bool`, optional): If `True`, resizes the image to the specified `size`. Default is `True`.
-- **normalize** (`bool`, optional): If `True`, normalizes the image by dividing by 255.0. Default is `True`.
-- **get_bbox** (`bool`, optional): If `True`, uses the RCNN model to obtain bounding boxes before classification. Default is `True`.
-- **rcnn_model** (`torch.nn.Module`, optional): The pre-trained Faster R-CNN model for object detection. Required if `get_bbox` is `True`.
-- **size** (`tuple`, optional): The target size for resizing the image. Default is `(224, 224)`.
+### 3. **Three-Focal Depth Inference**
 
-### Returns
+Provide three separate focal depth images using the `--F_neg15`, `--F0`, and `--F15` arguments.
 
-- **output** (`int | str`): The predicted class index or class label, depending on the `map_output` and `output_to_str` flags.
+#### Example Command:
 
-### Example Usage
-
-```python
-import torch
-from torchvision import transforms
-import cv2
-import numpy as np
-from typing import List, Union
-
-# Assuming models are loaded and device is set
-model, device = load_model(MODEL_PATH, get_device(), NCLASS)
-rcnn_model, rcnn_device = load_faster_RCNN_model_device(RCNN_PATH)
-
-# Load images
-image_F_neg15 = cv2.imread('path/to/F_neg15.jpg')
-image_F0 = cv2.imread('path/to/F0.jpg')
-image_F15 = cv2.imread('path/to/F15.jpg')
-
-depths_ims = [image_F_neg15, image_F0, image_F15]
-
-# Run inference
-output = inference(
-    model=model,
-    device=device,
-    depths_ims=depths_ims,
-    rcnn_model=rcnn_model,
-    output_to_str=True
-)
-
-print(f"Predicted Class: {output}")
+```bash
+python -m embpred_deploy.main --F_neg15 /path/to/F_neg15.jpg --F0 /path/to/F0.jpg --F15 /path/to/F15.jpg --model-name YOUR_MODEL_NAME
 ```
 
-## Model Files
 
-Ensure that the following model files are present in the specified paths:
+## Assumptions & Notes
 
-- **Faster R-CNN Model**: `rcnn.pth`
-- **Classification Model**: `model.pth`
+### **Input Image Format**
+- **Single image inference**:  
+  - Image is loaded in grayscale and converted to 3-channel RGB.
+- **Timelapse mode**:  
+  - Image filenames must be **sorted** to ensure correct timepoint alignment.
 
-**Note:** The paths are currently set as relative paths in the script. You may need to provide absolute paths or adjust them based on your directory structure.
+### **Model Output**
+- **Regular inference**:  
+  - The script maps raw model output to class labels.
+- **Timelapse inference**:  
+  - Raw probability vectors are returned unless `--postprocess` is enabled.
 
-## Troubleshooting
+### **Dependencies**
+The package requires the following libraries (installed via pip or Conda):
+- `pytorch`
+- `torchvision`
+- `opencv-python`
+- `numpy`
+- `matplotlib`
+- `tqdm`
 
-- **Model Loading Issues**:
-  - Ensure that the model files (`rcnn.pth` and `model.pth`) exist in the specified paths.
-  - Verify that the models are compatible with the PyTorch version installed.
+Ensure these dependencies are installed in your environment before running inference.
 
-- **Image Loading Errors**:
-  - Check that the provided image paths are correct.
-  - Ensure that the images are in a supported format (e.g., JPEG, PNG).
 
-- **CUDA Errors**:
-  - If running on a machine without a GPU, ensure that the `--use_GPU` flag is set to `False` or modify the script accordingly.
+## Support
 
-- **Missing Dependencies**:
-  - Install any missing Python packages using `pip install`.
-
-## License
-
-This project is licensed under the MIT License.
+For further details or troubleshooting, please refer to the source code or contact the maintainers.
