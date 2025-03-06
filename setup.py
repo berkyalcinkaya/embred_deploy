@@ -13,6 +13,7 @@ setup(
         "opencv-python",
         "numpy",
         "matplotlib",
+        "tqdm"
     ],
     entry_points={
         "console_scripts": [

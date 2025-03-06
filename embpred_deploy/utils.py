@@ -28,7 +28,7 @@ def load_model(model_path, device, num_classes, model_class=None):
     - best_val_auc: The best validation AUC at the time the checkpoint was saved.
     """
     # Load the checkpoint
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     
     # Instantiate the model
     model = model_class(num_classes=num_classes).to(device)

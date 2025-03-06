@@ -6,11 +6,12 @@ import numpy as np
 from torchvision import transforms
 import matplotlib.pyplot as plt
 from typing import List, Union
-from .rcnn import extract_emb_frame_2d
+from .rcnn import ExtractEmbFrame, extract_emb_frame_2d
 from .utils import mapping, load_model, get_device
 from embpred_deploy.models.mapping import mapping
 from embpred_deploy.config import MODELS_DIR
 from .post_process import monotonic_decoding
+from tqdm import tqdm
 
 available_models = list(mapping.keys())
 
@@ -24,7 +25,7 @@ def load_faster_RCNN_model_device(RCNN_PATH, use_GPU=True):
     else:
         device = torch.device('cpu')
         
-    model = torch.load(RCNN_PATH, map_location=device)
+    model = torch.load(RCNN_PATH, map_location=device, weights_only=False)
     return model, device
 
 
@@ -35,13 +36,14 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
     Perform inference on an image using a PyTorch model.
     See documentation for full parameter description.
     """
-    assert len(depths_ims) == 3, "depths_ims must contain three images."
+    assert len(depths_ims) == 3 or depths_ims.shape[-1] == 3, "depths_ims must contain three images."
     
     if get_bbox:
         assert rcnn_model is not None, "rcnn_model must be provided if get_bbox is True."
         assert totensor, "Image must be converted to a tensor if get_bbox is True."
         assert resize, "Image must be resized if get_bbox is True."
-        depths_ims = [extract_emb_frame_2d(depths_ims[i], rcnn_model, device) for i in range(3)]
+        depths_ims = ExtractEmbFrame(depths_ims[0], depths_ims[1], depths_ims[2], rcnn_model, device)
+        depths_ims = [depths_ims[0], depths_ims[1], depths_ims[2]]
     
     if isinstance(depths_ims, List):
         image = np.stack(depths_ims, axis=-1)
@@ -61,10 +63,11 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
     # Perform inference
     model.eval()
     with torch.no_grad():
-        output = model(image)
+        output = model(image).squeeze(0)
+        
     
     if map_output or output_to_str:
-        output = torch.argmax(output, dim=1).item()
+        output = torch.argmax(output).item()
         if output_to_str:
             output = mapping[output]
     
@@ -129,7 +132,8 @@ if __name__ == "__main__":
     rcnn_model, rcnn_device = load_faster_RCNN_model_device(RCNN_PATH)
     # For regular inference we still map output to class label.
     # For timelapse we want the raw output (probability vector), so we use map_output=False.
-    model, epoch, best_val_auc = load_model(model_path, get_device(), NCLASS)
+    # find class 
+    model, epoch, best_val_auc = load_model(model_path, get_device(), NCLASS, model_class=model_class)
     
     
     # List to store inference outputs
@@ -150,7 +154,7 @@ if __name__ == "__main__":
             list_files = [sorted(os.listdir(fp)) for fp in focal_paths]
             # Determine minimum count across subdirectories
             num_timepoints = min(len(files) for files in list_files)
-            for i in range(num_timepoints):
+            for i in tqdm(range(num_timepoints)):
                 file_paths = [os.path.join(focal_paths[j], list_files[j][i]) for j in range(3)]
                 # Load images
                 images = []
@@ -169,15 +173,14 @@ if __name__ == "__main__":
         else:
             # Assume directory contains images: each image is a timepoint and will be duplicated to form the three channels.
             timepoint_files = sorted([f for f in os.listdir(timelapse_dir) if os.path.isfile(os.path.join(timelapse_dir, f))])
-            for file in timepoint_files:
+            for file in tqdm(timepoint_files):
                 fp = os.path.join(timelapse_dir, file)
                 single_image = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
                 if single_image is None:
                     print(f"Failed to load image at {fp}")
                     continue
                 duplicated_image = cv2.cvtColor(single_image, cv2.COLOR_GRAY2RGB)
-                images = [duplicated_image, duplicated_image, duplicated_image]
-                outputs.append(inference(model, device, images, map_output=False, output_to_str=False, 
+                outputs.append(inference(model, device, duplicated_image.transpose(2, 0, 1), map_output=False, output_to_str=False, 
                                          rcnn_model=rcnn_model))
         
         np.save("raw_timelapse_outputs.npy", np.array(outputs))

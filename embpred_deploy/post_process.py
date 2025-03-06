@@ -20,6 +20,7 @@ def monotonic_decoding(probabilities, loss='NLL'):
         The optimal (monotonically non-decreasing) class index at each frame.
         Class indices are in [0, k-1].
     """
+    print(probabilities.shape)
     # Basic checks
     if loss not in ['NLL', 'EM']:
         raise ValueError("loss must be either 'NLL' or 'EM'")
