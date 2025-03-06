@@ -59,21 +59,24 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
         image = transforms.Resize((224, 224))(image)
     if normalize:
         image /= 255.0
+
+    print(image.shape)
     
     # Add a batch dimension
+    plt.imshow(image[0,:,:])
+    plt.show()
     image = image.unsqueeze(0).to(device)
     
     # Perform inference
     model.eval()
     with torch.no_grad():
         output = model(image).squeeze(0)
-        
+    
     
     if map_output or output_to_str:
         output = torch.argmax(output).item()
         if output_to_str:
             output = class_mapping[output]
-    
     return output
 
 
@@ -183,8 +186,15 @@ if __name__ == "__main__":
                     print(f"Failed to load image at {fp}")
                     continue
                 duplicated_image = cv2.cvtColor(single_image, cv2.COLOR_GRAY2RGB)
-                outputs.append(inference(model, device, duplicated_image.transpose(2, 0, 1), map_output=False, output_to_str=False, 
-                                         rcnn_model=rcnn_model))
+
+                # save an image every so often
+                if len(outputs) % 10 == 0:
+                    cv2.imwrite(f"timelapse_output_{len(outputs)}.png", duplicated_image)
+
+                output = inference(model, device, duplicated_image.transpose(2,0,1), rcnn_model=rcnn_model, output_to_str=False, map_output=False)
+                print(f"Class label: {(torch.argmax(output)).item()}")
+                print(output)
+                outputs.append(output)
         
         np.save("raw_timelapse_outputs.npy", np.array(outputs))
         print("Raw outputs saved to raw_timelapse_outputs.npy")
