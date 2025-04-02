@@ -7,6 +7,56 @@ from collections import OrderedDict
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters())
 
+class CustomResNet50(nn.Module):
+    def __init__(self, num_classes, num_dense_layers, dense_neurons, freeze_=True, dropout_rate=0):
+        """
+        Parameters:
+            num_classes (int): Number of output classes.
+            num_dense_layers (int): Number of custom dense layers to add.
+            dense_neurons (int or list): If int, all dense layers will have the same number of neurons.
+                                          If list, it must have length equal to num_dense_layers.
+            freeze (bool): If True, freeze the pretrained ResNet-50 layers.
+            dropout_rate (float): Dropout rate to apply after each dense layer. If set to 0 or less, dropout is not used.
+        """
+        super(CustomResNet50, self).__init__()
+        # Load the pretrained ResNet-50 model
+        self.resnet = models.resnet50(pretrained=True)
+        
+        # Optionally freeze the ResNet-50 layers
+        if freeze_:
+            for param in self.resnet.parameters():
+                param.requires_grad = False
+        
+        # Remove the original fully connected layer
+        num_ftrs = self.resnet.fc.in_features  # In ResNet-50, this is 2048
+        self.resnet.fc = nn.Identity()  # Replace the final fc layer with an identity layer
+
+        # If a single integer is provided for dense_neurons, replicate it for num_dense_layers layers.
+        if isinstance(dense_neurons, int):
+            dense_neurons = [dense_neurons] * num_dense_layers
+
+        # Build custom dense layers based on specified parameters.
+        layers = []
+        input_size = num_ftrs
+        if num_dense_layers > 0:
+            for neurons in dense_neurons:
+                layers.append(nn.Linear(input_size, neurons))  # Fully connected layer
+                layers.append(nn.ReLU(inplace=True))
+                if dropout_rate > 0:
+                    layers.append(nn.Dropout(dropout_rate))
+                input_size = neurons
+        # Final output layer without any activation (CrossEntropyLoss includes softmax)
+        layers.append(nn.Linear(input_size, num_classes))
+        self.classifier = nn.Sequential(*layers)
+
+    def forward(self, x):
+        # Forward pass through ResNet-50 backbone (excluding final FC layer)
+        x = self.resnet(x)
+        x = torch.flatten(x, 1)  # Flatten to a vector
+        # Forward pass through custom classifier layers
+        x = self.classifier(x)
+        return x  # Return logits (no softmax)
+
 class BigWNet(nn.Module):
     """
     W-Net implementation for image classification, adapted for 224 x 224 x 3 inputs.
@@ -409,43 +459,3 @@ class CustomResNet18(nn.Module):
         
         return x
 
-
-
-class CustomResNet50(nn.Module):
-    def __init__(self, num_classes, num_dense_layers, dense_neurons):
-        super(CustomResNet50, self).__init__()
-        # Load the pretrained ResNet-50 model
-        self.resnet = models.resnet50(pretrained=True) #, num_classes=num_classes)
-        
-        # Freeze all the ResNet-50 layers
-        for param in self.resnet.parameters():
-            param.requires_grad = False
-        
-        # Remove the original fully connected layer
-        num_ftrs = self.resnet.fc.in_features  # In ResNet-50, this is 2048
-        self.resnet.fc = nn.Identity()  # Replace the final fc layer with an identity layer
-
-        # If a single integer is provided, apply it to all dense layers
-        if isinstance(dense_neurons, int):
-            dense_neurons = [dense_neurons] * num_dense_layers
-
-        # Define the custom dense layers dynamically based on the specified number of layers
-        layers = []
-        input_size = num_ftrs
-        for i, neurons in enumerate(dense_neurons):
-            layers.append(('fc{}'.format(i + 1), nn.Linear(input_size, neurons)))
-            layers.append(('relu{}'.format(i + 1), nn.ReLU(inplace=True)))
-            layers.append(('dropout{}'.format(i + 1), nn.Dropout(0.5)))
-            input_size = neurons
-        layers.append(('fc_final', nn.Linear(input_size, num_classes)))  # Final output layer, no softmax
-        
-        self.classifier = nn.Sequential(*[nn.Sequential(layer) for layer in layers])
-
-    def forward(self, x):
-        # Forward pass through ResNet-50 backbone (without the final FC layer)
-        x = self.resnet(x)
-        x = torch.flatten(x, 1)  # Flatten to a vector
-        
-        # Forward pass through custom classifier
-        x = self.classifier(x)
-        return x  # Return logits, no softmax
