@@ -15,7 +15,7 @@ To ensure compatibility, create a new Conda environment:
 conda create -n embd python=3.12
 conda activate embd
 ```
-### 2. Install `embpred_deploy` via pip
+### 2. Install `embpred_deploy` via pip (not supported yet)
 
 Once the environment is set up, install the package:
 
@@ -28,7 +28,7 @@ pip install embpred_deploy
 Alternatively, if you prefer to pull the latest code directly from GitHub, run:
 
 ```bash
-git clone https://github.com/your-username/embpred_deploy.git
+git clone https://github.com/berkyalcinkaya/embpred_deploy.git
 cd embpred_deploy
 pip install -e .
 ```
