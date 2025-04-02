@@ -40,7 +40,6 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
     See documentation for full parameter description.
     """
     assert len(depths_ims) == 3 or depths_ims.shape[-1] == 3, "depths_ims must contain three images."
-    
     if get_bbox:
         assert rcnn_model is not None, "rcnn_model must be provided if get_bbox is True."
         assert totensor, "Image must be converted to a tensor if get_bbox is True."
@@ -57,17 +56,15 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
         image = transforms.ToTensor()(image)
     if resize:
         image = transforms.Resize((224, 224))(image)
-    if normalize:
-        image /= 255.0
+    
+    # NOTE: ToTensor() scales the image to [0, 1] and converts to tensor.
+    # no neeed to normalize
+    # if normalize:s
+    #     image /= 255.0
 
-    print(image.shape)
-    
-    # Add a batch dimension
-    plt.imshow(image[0,:,:])
-    plt.show()
-    image = image.unsqueeze(0).to(device)
-    
+
     # Perform inference
+    image = image.unsqueeze(0).to(device)
     model.eval()
     with torch.no_grad():
         output = model(image).squeeze(0)
@@ -182,18 +179,13 @@ if __name__ == "__main__":
             for file in tqdm(timepoint_files):
                 fp = os.path.join(timelapse_dir, file)
                 single_image = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
+
                 if single_image is None:
                     print(f"Failed to load image at {fp}")
                     continue
                 duplicated_image = cv2.cvtColor(single_image, cv2.COLOR_GRAY2RGB)
-
-                # save an image every so often
-                if len(outputs) % 10 == 0:
-                    cv2.imwrite(f"timelapse_output_{len(outputs)}.png", duplicated_image)
-
                 output = inference(model, device, duplicated_image.transpose(2,0,1), rcnn_model=rcnn_model, output_to_str=False, map_output=False)
                 print(f"Class label: {(torch.argmax(output)).item()}")
-                print(output)
                 outputs.append(output)
         
         np.save("raw_timelapse_outputs.npy", np.array(outputs))
