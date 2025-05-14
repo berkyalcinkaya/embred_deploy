@@ -38,7 +38,7 @@ pip install -e .
 
 Pretrained model weights are stored on Google Drive. To use the latest trained models, download the weight files from:
 
-[Google Drive Weights](https://drive.google.com/file/d/1bf7vCVUbkREmODBsdFPL7yA6ypg95tRT/view?usp=sharing)
+[Google Drive Weights](https://drive.google.com/file/d/1c-BJ0dvxzaZ4wMxMlhiRtwzURz7_ryaH/view?usp=sharing)
 
 ### Install Weights
 
