@@ -36,7 +36,7 @@ def load_model(model_path, device, num_classes, model_class=None, class_args=Non
         class_args = {}
     
     # Instantiate the model with both num_classes and additional class_args
-    model = model_class(num_classes=num_classes, **class_args).to(device)
+    model = model_class(**class_args).to(device)
     
     # Load the state dictionary into the model
     model.load_state_dict(checkpoint['model_state_dict'])
