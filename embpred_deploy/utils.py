@@ -12,7 +12,7 @@ mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3", 5: "t4", 6: "t5", 7: 
 def get_device():
     return torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-def load_model(model_path, device, num_classes, model_class=None):
+def load_model(model_path, device, num_classes, model_class=None, class_args=None):
     """
     Load a model from a saved checkpoint.
 
@@ -20,7 +20,8 @@ def load_model(model_path, device, num_classes, model_class=None):
     - model_path: The path to the checkpoint file.
     - device: The device to load the model onto (e.g., 'cpu' or 'cuda').
     - num_classes: The number of classes in the dataset.
-    - model_class: The class of the model to instantiate (use BiggerNet3D, above).
+    - model_class: The class of the model to instantiate.
+    - class_args: Optional dictionary of additional arguments for the model constructor.
 
     Returns:
     - model: The loaded model with the state dictionary applied.
@@ -30,8 +31,12 @@ def load_model(model_path, device, num_classes, model_class=None):
     # Load the checkpoint
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     
-    # Instantiate the model
-    model = model_class(num_classes=num_classes).to(device)
+    # Prepare additional class arguments if not provided
+    if class_args is None:
+        class_args = {}
+    
+    # Instantiate the model with both num_classes and additional class_args
+    model = model_class(num_classes=num_classes, **class_args).to(device)
     
     # Load the state dictionary into the model
     model.load_state_dict(checkpoint['model_state_dict'])
