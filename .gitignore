@@ -3,3 +3,4 @@
 *.png
 F0
 *.npy
+*/.DS_Store

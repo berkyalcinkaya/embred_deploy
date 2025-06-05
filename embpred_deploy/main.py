@@ -165,7 +165,7 @@ if __name__ == "__main__":
     model_class_arg = mapping[args.model_name][1]  # (not used in load_model below)
     model_path = os.path.join(MODELS_DIR, f"{args.model_name}.pth")
     rcnn_model, rcnn_device = load_faster_RCNN_model_device(RCNN_PATH)
-    model, epoch, best_val_auc = load_model(model_path, device, NCLASS, model_class=model_class)
+    model, epoch, best_val_auc = load_model(model_path, device, NCLASS, model_class=model_class, class_args=model_class_arg)
     
     outputs = []
     
