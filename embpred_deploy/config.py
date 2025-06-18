@@ -1,5 +1,4 @@
-import os
-# add a path to the project
-#
-PROJ_DIR =  os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(PROJ_DIR, "models")
+from pathlib import Path
+
+PROJ_DIR = Path(__file__).resolve().parent
+MODELS_DIR = PROJ_DIR / "models"

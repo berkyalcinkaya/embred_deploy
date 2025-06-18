@@ -19,8 +19,8 @@ class CustomResNet50(nn.Module):
             dropout_rate (float): Dropout rate to apply after each dense layer. If set to 0 or less, dropout is not used.
         """
         super(CustomResNet50, self).__init__()
-        # Load the pretrained ResNet-50 model
-        self.resnet = models.resnet50(pretrained=True)
+        # Load the ResNet-50 model without downloading pretrained weights
+        self.resnet = models.resnet50(weights=None)
         
         # Optionally freeze the ResNet-50 layers
         if freeze_:
@@ -29,7 +29,8 @@ class CustomResNet50(nn.Module):
         
         # Remove the original fully connected layer
         num_ftrs = self.resnet.fc.in_features  # In ResNet-50, this is 2048
-        self.resnet.fc = nn.Identity()  # Replace the final fc layer with an identity layer
+        
+        self.resnet.fc = nn.Identity()
 
         # If a single integer is provided for dense_neurons, replicate it for num_dense_layers layers.
         if isinstance(dense_neurons, int):
@@ -410,7 +411,7 @@ class CustomResNet18(nn.Module):
     def __init__(self, num_classes, num_dense_layers, dense_neurons, input_shape):
         super(CustomResNet18, self).__init__()
         # Load the pretrained ResNet-18 model
-        self.resnet = models.resnet18(pretrained=True)
+        self.resnet = models.resnet18(weights=None)
         
         # Freeze all ResNet-18 layers
         for param in self.resnet.parameters():
@@ -418,7 +419,7 @@ class CustomResNet18(nn.Module):
         
         # Remove the original fully connected layer
         num_ftrs = self.resnet.fc.in_features  # Typically 512 for ResNet-18
-        self.resnet.fc = nn.Identity()  # Replace the final fc layer with an identity layer
+        self.resnet.fc = nn.Linear(num_ftrs, num_ftrs)
 
         # Determine the feature size based on input_shape
         # This step ensures compatibility if the ResNet architecture is altered

@@ -7,13 +7,13 @@ from torchvision import transforms
 import matplotlib.pyplot as plt
 from typing import List, Union
 from .rcnn import ExtractEmbFrame, extract_emb_frame_2d
-from .utils import mapping, load_model, get_device
-from embpred_deploy.models.mapping import mapping
+from .utils import load_model, get_device, class_mapping
+from embpred_deploy.models.mapping import model_mapping
 from embpred_deploy.config import MODELS_DIR
 from .post_process import monotonic_decoding
 from tqdm import tqdm
 
-available_models = list(mapping.keys())
+available_models = list(model_mapping.keys())
 
 class_mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3", 
            5: "t4", 6: "t5", 7: "t6", 8: "t7", 9: "t8", 10: "tM", 11: "tB", 12: "tEB"}
@@ -161,8 +161,8 @@ def main():
     device = get_device()
     
     # Load the models
-    model_class = mapping[args.model_name][0]
-    model_class_arg = mapping[args.model_name][1]  # (not used in load_model below)
+    model_class = model_mapping[args.model_name][0]
+    model_class_arg = model_mapping[args.model_name][1]  # (not used in load_model below)
     model_path = os.path.join(MODELS_DIR, f"{args.model_name}.pth")
     rcnn_model, rcnn_device = load_faster_RCNN_model_device(RCNN_PATH)
     model, epoch, best_val_auc = load_model(model_path, device, NCLASS, model_class=model_class, class_args=model_class_arg)

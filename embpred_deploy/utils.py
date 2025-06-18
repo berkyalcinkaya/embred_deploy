@@ -1,7 +1,7 @@
 import torch
 from .models import models 
 
-mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3", 5: "t4", 6: "t5", 7: "t6",
+class_mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3", 5: "t4", 6: "t5", 7: "t6",
     8: "t7",
     9: "t8",
     10: "tM",
@@ -39,7 +39,7 @@ def load_model(model_path, device, num_classes, model_class=None, class_args=Non
     model = model_class(**class_args).to(device)
     
     # Load the state dictionary into the model
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(checkpoint['model_state_dict'], strict=False)
     
     # Retrieve additional information
     epoch = checkpoint['epoch']
