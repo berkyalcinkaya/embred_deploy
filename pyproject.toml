@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "embpred_deploy"
+version = "0.1.0"
+description = "Emb Deployment Package for Image Inference using Faster-RCNN and custom classification networks"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Berk Yalcinkaya", email = "berkyalc@stanford.edu"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "torch>=1.9.0",
+    "torchvision>=0.10.0",
+    "opencv-python-headless>=4.5.0",
+    "numpy>=1.21.0",
+    "matplotlib>=3.3.0",
+    "tqdm>=4.60.0",
+]
+
+[project.scripts]
+embpred_deploy = "embpred_deploy.main:main"
+
+[project.urls]
+Homepage = "https://github.com/berkyalcinkaya/embpred_deploy"
+Repository = "https://github.com/berkyalcinkaya/embpred_deploy"
+Issues = "https://github.com/berkyalcinkaya/embpred_deploy/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["embpred_deploy*"] 

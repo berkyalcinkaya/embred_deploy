@@ -1,3 +1,35 @@
+Metadata-Version: 2.4
+Name: embpred_deploy
+Version: 0.1.0
+Summary: Emb Deployment Package for Image Inference using Faster-RCNN and custom classification networks
+Author-email: Berk Yalcinkaya <berkyalc@stanford.edu>
+License: MIT
+Project-URL: Homepage, https://github.com/berkyalcinkaya/embpred_deploy
+Project-URL: Repository, https://github.com/berkyalcinkaya/embpred_deploy
+Project-URL: Issues, https://github.com/berkyalcinkaya/embpred_deploy/issues
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Scientific/Engineering :: Image Processing
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: torch>=1.9.0
+Requires-Dist: torchvision>=0.10.0
+Requires-Dist: opencv-python-headless>=4.5.0
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: matplotlib>=3.3.0
+Requires-Dist: tqdm>=4.60.0
+Dynamic: license-file
+
 # embpred_deploy Documentation
 
 ## Overview

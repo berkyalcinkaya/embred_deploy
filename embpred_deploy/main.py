@@ -44,8 +44,7 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
         assert rcnn_model is not None, "rcnn_model must be provided if get_bbox is True."
         assert totensor, "Image must be converted to a tensor if get_bbox is True."
         assert resize, "Image must be resized if get_bbox is True."
-        depths_ims = ExtractEmbFrame(depths_ims[0], depths_ims[1], depths_ims[2], rcnn_model, device)
-        depths_ims = [depths_ims[0], depths_ims[1], depths_ims[2]]
+        depths_ims = list(ExtractEmbFrame(depths_ims[0], depths_ims[1], depths_ims[2], rcnn_model, device))
     
     if isinstance(depths_ims, List):
         image = np.stack(depths_ims, axis=-1)
@@ -73,11 +72,12 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
     if map_output or output_to_str:
         output = torch.argmax(output).item()
         if output_to_str:
-            output = class_mapping[output]
+            output = class_mapping[int(output)]
     return output
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the embpred_deploy command-line interface."""
     parser = argparse.ArgumentParser(description="Run inference on image(s) with specified focal depths.")
     
     # Mutually exclusive modes
@@ -276,3 +276,7 @@ if __name__ == "__main__":
         output = inference(model, device, depths_ims,
                            rcnn_model=rcnn_model, output_to_str=True)
         print(f"Class label: {output}")
+
+
+if __name__ == "__main__":
+    main()
