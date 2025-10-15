@@ -16,7 +16,7 @@ from tqdm import tqdm
 available_models = list(model_mapping.keys())
 
 class_mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3", 
-           5: "t4", 6: "t5", 7: "t6", 8: "t7", 9: "t8", 10: "tM", 11: "tB", 12: "tEB"}
+                5: "t4", 6: "t5", 7: "t6", 8: "t7", 9: "t8", 10: "tM", 11: "tB", 12: "tEB", 13: "tEmpty"}
 
 SIZE = (224, 224)
 NCLASS = 13
@@ -67,7 +67,6 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
     model.eval()
     with torch.no_grad():
         output = model(image).squeeze(0)
-    
     
     if map_output or output_to_str:
         output = torch.argmax(output).item()
