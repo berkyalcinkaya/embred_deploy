@@ -144,6 +144,13 @@ def main():
     )
     
     parser.add_argument(
+        "--model-path",
+        type=str,
+        default=None,
+        help="Optional path to the model file. If not provided, the path will be constructed from --model-name."
+    )
+    
+    parser.add_argument(
         "--postprocess",
         action="store_true",
         help="If provided, postprocess the model output (map raw output to class labels).",
@@ -162,7 +169,7 @@ def main():
     # Load the models
     model_class = model_mapping[args.model_name][0]
     model_class_arg = model_mapping[args.model_name][1]  # (not used in load_model below)
-    model_path = os.path.join(MODELS_DIR, f"{args.model_name}.pth")
+    model_path = args.model_path if args.model_path is not None else os.path.join(MODELS_DIR, f"{args.model_name}.pth")
     rcnn_model, rcnn_device = load_faster_RCNN_model_device(RCNN_PATH)
     model, epoch, best_val_auc = load_model(model_path, device, NCLASS, model_class=model_class, class_args=model_class_arg)
     
