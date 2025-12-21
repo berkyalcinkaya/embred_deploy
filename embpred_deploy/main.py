@@ -61,12 +61,11 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
     # if normalize:s
     #     image /= 255.0
 
-
     # Perform inference
     image = image.unsqueeze(0).to(device)
     model.eval()
     with torch.no_grad():
-        output = model(image).squeeze(0)
+        output = model(image).squeeze(0).cpu().numpy()
     
     if map_output or output_to_str:
         output = torch.argmax(output).item()
@@ -154,7 +153,7 @@ def main():
         "--postprocess",
         action="store_true",
         help="If provided, postprocess the model output (map raw output to class labels).",
-        default=True
+        default=False
     )
     
     args = parser.parse_args()
@@ -210,25 +209,13 @@ def main():
                 file_paths = [os.path.join(focal_paths[j], list_files[j][i]) for j in range(3)]
                 images = []
                 for fp in file_paths:
-                    img = cv2.imread(fp)
+                    img = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
                     if img is None:
                         print(f"Failed to load image at {fp}")
                         exit(1)
                     images.append(img)
                 outputs.append(inference(model, device, images, map_output=False, output_to_str=False,
                                          rcnn_model=rcnn_model))
-        elif len(subdirs) > 0:
-            # Fallback: assume timelapse_dir contains images to be duplicated.
-            timepoint_files = sorted([f for f in os.listdir(timelapse_dir) if os.path.isfile(os.path.join(timelapse_dir, f))])
-            for file in tqdm(timepoint_files):
-                fp = os.path.join(timelapse_dir, file)
-                single_image = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
-                if single_image is None:
-                    print(f"Failed to load image at {fp}")
-                    continue
-                duplicated_image = cv2.cvtColor(single_image, cv2.COLOR_GRAY2RGB)
-                outputs.append(inference(model, device, duplicated_image.transpose(2, 0, 1),
-                                         rcnn_model=rcnn_model, output_to_str=False, map_output=False))
         else:
             # No subdirectories: assume timelapse_dir contains images to be duplicated.
             timepoint_files = sorted([f for f in os.listdir(timelapse_dir) if os.path.isfile(os.path.join(timelapse_dir, f))])
