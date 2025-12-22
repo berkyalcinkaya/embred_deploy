@@ -4,6 +4,7 @@ import argparse
 import torch
 import numpy as np
 from torchvision import transforms
+from torchvision.transforms import v2
 import matplotlib.pyplot as plt
 from typing import List, Union
 from .rcnn import ExtractEmbFrame, extract_emb_frame_2d
@@ -32,10 +33,20 @@ def load_faster_RCNN_model_device(RCNN_PATH, use_GPU=True):
     return model, device
 
 
-def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, np.ndarray], 
-              map_output=True, output_to_str=False, totensor=True, resize=True, normalize=True, get_bbox=True, 
-              rcnn_model=None, size=(224, 224)):
+def inference(model, device, 
+            depths_ims: Union[List[np.ndarray], torch.Tensor, np.ndarray], 
+              map_output=True, 
+              output_to_str=False, 
+              totensor=True, resize=True, 
+              normalize=True, 
+              get_bbox=True, 
+              resnet_normalize=True,
+              rcnn_model=None, 
+              size=(224, 224),
+              ):
     """
+
+
     Perform inference on an image using a PyTorch model.
     See documentation for full parameter description.
     """
@@ -47,24 +58,19 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
         assert resize, "Image must be resized if get_bbox is True."
         depths_ims = list(ExtractEmbFrame(depths_ims[0], depths_ims[1], depths_ims[2], rcnn_model, device))
 
-
     if isinstance(depths_ims, List):
         image = np.stack(depths_ims, axis=-1)
     else:
         image = depths_ims
-    
-    # 50 % of time, write the image to a directory
-    
     if totensor:
-        image = transforms.ToTensor()(image)
+        image = torch.from_numpy(image).permute(2, 0, 1).float()
     if resize:
-        image = transforms.Resize((224, 224))(image)
+        image = v2.Resize(size)(image)
+    if normalize:
+        image /= 255.0
+    if resnet_normalize:
+        image =v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(image)
     
-    # NOTE: ToTensor() scales the image to [0, 1] and converts to tensor.
-    # no neeed to normalize
-    # if normalize:s
-    #     image /= 255.0
-
     # Perform inference
     image = image.unsqueeze(0).to(device)
     model.eval()
@@ -166,6 +172,13 @@ def main():
         default=None,
         help="Device to use for inference (e.g., 'cpu', 'cuda', 'cuda:0'). If not provided, will use CUDA if available, otherwise CPU."
     )
+
+    parser.add_argument(
+        "--nth-timepoint",
+        type=int,
+        default=None,
+        help= "If provided, only process the nth timepoint of the timeseries."
+    )
     
     args = parser.parse_args()
     
@@ -218,11 +231,21 @@ def main():
             print(f"Error: {timelapse_dir} is not a valid directory.")
             exit(1)
         subdirs = sorted([d for d in os.listdir(timelapse_dir) if os.path.isdir(os.path.join(timelapse_dir, d))])
-        if len(subdirs) == 3:
+        print(f"Subdirectories: {subdirs}")
+        if len(subdirs) > 1:
+            assert len(subdirs) >= 3, "At least 3 subdirectories are required for timelapse inference."
+
+            if len(subdirs) != 3:
+                subdirs = [ "F-15", "F0", "F15" ]
+                
             focal_paths = [os.path.join(timelapse_dir, d) for d in subdirs]
             list_files = [sorted(os.listdir(fp)) for fp in focal_paths]
             num_timepoints = min(len(files) for files in list_files)
             for i in tqdm(range(num_timepoints)):
+
+                if args.nth_timepoint is not None and i % args.nth_timepoint != 0:
+                    continue
+
                 file_paths = [os.path.join(focal_paths[j], list_files[j][i]) for j in range(3)]
                 images = []
                 for fp in file_paths:
