@@ -1,5 +1,7 @@
 import torch
 from .models import models 
+import re
+
 
 class_mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3", 5: "t4", 6: "t5", 7: "t6",
     8: "t7",
@@ -8,6 +10,13 @@ class_mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3", 5: "t4", 6: "t5
     11: "tB",
     12: "tEB"
 }
+
+def sort_embryo_fname_by_run(filename):
+    match = re.search(r'RUN(\d+)', filename)
+    if match:
+        return int(match.group(1))
+    else:
+        return float('inf')
 
 def get_device():
     return torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

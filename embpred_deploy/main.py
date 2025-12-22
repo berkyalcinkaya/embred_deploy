@@ -8,11 +8,12 @@ from torchvision.transforms import v2
 import matplotlib.pyplot as plt
 from typing import List, Union
 from .rcnn import ExtractEmbFrame, extract_emb_frame_2d
-from .utils import load_model, get_device, class_mapping
+from .utils import load_model, get_device, class_mapping, sort_embryo_fname_by_run
 from embpred_deploy.models.mapping import model_mapping
 from embpred_deploy.config import MODELS_DIR
 from .post_process import monotonic_decoding
 from tqdm import tqdm
+import shutil
 
 available_models = list(model_mapping.keys())
 
@@ -22,6 +23,20 @@ class_mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3",
 SIZE = (224, 224)
 NCLASS = 14
 RCNN_PATH = os.path.join(MODELS_DIR, "rcnn.pt")
+
+def write_outputs(max_prob_classes, input_images, output_dir='test_outputs'):
+    # if output_dir does not exist, create it
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    else:
+        shutil.rmtree(output_dir)
+        os.makedirs(output_dir)
+    # for each input image, annotate the image with the max probability class
+    for i in range(len(input_images)):
+        input_image = input_images[i]
+        max_prob_class = class_mapping[max_prob_classes[i]]
+        input_image = cv2.putText(input_image, str(max_prob_class), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv2.imwrite(os.path.join(output_dir, f'{i}.png'), input_image)
 
 def load_faster_RCNN_model_device(RCNN_PATH, use_GPU=True):
     if use_GPU:
@@ -235,6 +250,7 @@ def main():
             outputs.append(inference(model, device, images, map_output=False, output_to_str=False,
                                      rcnn_model=rcnn_model))
     elif args.timelapse_dir:
+        all_images = []
         timelapse_dir = args.timelapse_dir
         if not os.path.isdir(timelapse_dir):
             print(f"Error: {timelapse_dir} is not a valid directory.")
@@ -248,7 +264,8 @@ def main():
                 subdirs = [ "F-15", "F0", "F15" ]
                 
             focal_paths = [os.path.join(timelapse_dir, d) for d in subdirs]
-            list_files = [sorted(os.listdir(fp)) for fp in focal_paths]
+
+            list_files = [sorted(os.listdir(fp), key=sort_embryo_fname_by_run) for fp in focal_paths]
             num_timepoints = min(len(files) for files in list_files)
             for i in tqdm(range(num_timepoints)):
 
@@ -263,11 +280,12 @@ def main():
                         print(f"Failed to load image at {fp}")
                         exit(1)
                     images.append(img)
+                all_images.append(np.stack(images, axis=-1))
                 outputs.append(inference(model, device, images, map_output=False, output_to_str=False,
                                          rcnn_model=rcnn_model))
         else:
             # No subdirectories: assume timelapse_dir contains images to be duplicated.
-            timepoint_files = sorted([f for f in os.listdir(timelapse_dir) if os.path.isfile(os.path.join(timelapse_dir, f))])
+            timepoint_files = sorted([f for f in os.listdir(timelapse_dir) if os.path.isfile(os.path.join(timelapse_dir, f))], key=sort_embryo_fname_by_run)
             for file in tqdm(timepoint_files):
                 fp = os.path.join(timelapse_dir, file)
                 single_image = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
@@ -275,6 +293,7 @@ def main():
                     print(f"Failed to load image at {fp}")
                     continue
                 duplicated_image = cv2.cvtColor(single_image, cv2.COLOR_GRAY2RGB)
+                all_images.append(duplicated_image.transpose(2, 0, 1))
                 outputs.append(inference(model, device, duplicated_image.transpose(2, 0, 1),
                                          rcnn_model=rcnn_model, output_to_str=False, map_output=False))
         np.save("raw_timelapse_outputs.npy", np.array(outputs))
@@ -284,6 +303,7 @@ def main():
             print("Postprocessed outputs saved to postprocessed_timelapse_outputs.npy")
         max_prob_classes = np.argmax(np.array(outputs), axis=1)
         print(max_prob_classes)
+        write_outputs(max_prob_classes, all_images)
         np.savetxt("max_prob_classes.csv", max_prob_classes, delimiter=",")
         print("Max probability classes saved to max_prob_classes.csv")
     
