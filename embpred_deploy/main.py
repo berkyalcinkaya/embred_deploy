@@ -39,17 +39,21 @@ def inference(model, device, depths_ims: Union[List[np.ndarray], torch.Tensor, n
     Perform inference on an image using a PyTorch model.
     See documentation for full parameter description.
     """
+
     assert len(depths_ims) == 3 or depths_ims.shape[-1] == 3, "depths_ims must contain three images."
     if get_bbox:
         assert rcnn_model is not None, "rcnn_model must be provided if get_bbox is True."
         assert totensor, "Image must be converted to a tensor if get_bbox is True."
         assert resize, "Image must be resized if get_bbox is True."
         depths_ims = list(ExtractEmbFrame(depths_ims[0], depths_ims[1], depths_ims[2], rcnn_model, device))
-    
+
+
     if isinstance(depths_ims, List):
         image = np.stack(depths_ims, axis=-1)
     else:
         image = depths_ims
+    
+    # 50 % of time, write the image to a directory
     
     if totensor:
         image = transforms.ToTensor()(image)
@@ -156,6 +160,13 @@ def main():
         default=False
     )
     
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Device to use for inference (e.g., 'cpu', 'cuda', 'cuda:0'). If not provided, will use CUDA if available, otherwise CPU."
+    )
+    
     args = parser.parse_args()
     
     # If focal-depths flag is set, ensure that all three focal directory arguments are provided.
@@ -163,13 +174,19 @@ def main():
         if not (args.focal_dir1 and args.focal_dir2 and args.focal_dir3):
             parser.error("When using --focal-depths, you must provide --focal-dir1, --focal-dir2, and --focal-dir3.")
     
-    device = get_device()
+    # Set device: use provided device or fall back to get_device()
+    if args.device is not None:
+        device = torch.device(args.device)
+    else:
+        device = get_device()
     
     # Load the models
     model_class = model_mapping[args.model_name][0]
     model_class_arg = model_mapping[args.model_name][1]  # (not used in load_model below)
     model_path = args.model_path if args.model_path is not None else os.path.join(MODELS_DIR, f"{args.model_name}.pth")
-    rcnn_model, rcnn_device = load_faster_RCNN_model_device(RCNN_PATH)
+    # Use the same device for RCNN model
+    use_gpu = device.type == 'cuda'
+    rcnn_model, rcnn_device = load_faster_RCNN_model_device(RCNN_PATH, use_GPU=use_gpu)
     model, epoch, best_val_auc = load_model(model_path, device, NCLASS, model_class=model_class, class_args=model_class_arg)
     
     outputs = []
@@ -233,7 +250,8 @@ def main():
         if args.postprocess:
             outputs = monotonic_decoding(np.array(outputs), loss='NLL')
             print("Postprocessed outputs saved to postprocessed_timelapse_outputs.npy")
-        max_prob_classes = [np.argmax(output) for output in outputs]
+        max_prob_classes = np.argmax(np.array(outputs), axis=1)
+        print(max_prob_classes)
         np.savetxt("max_prob_classes.csv", max_prob_classes, delimiter=",")
         print("Max probability classes saved to max_prob_classes.csv")
     
