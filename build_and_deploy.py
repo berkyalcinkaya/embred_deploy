@@ -47,11 +47,17 @@ def check_package():
 
 def upload_to_testpypi():
     """Upload to TestPyPI."""
-    return run_command("python -m twine upload --repository testpypi dist/*", "Uploading to TestPyPI")
+    print("\nUploading to TestPyPI...")
+    print("Running: python -m twine upload --repository testpypi dist/*")
+    result = subprocess.run("python -m twine upload --repository testpypi dist/*", shell=True)
+    return result.returncode == 0
 
 def upload_to_pypi():
     """Upload to PyPI."""
-    return run_command("python -m twine upload dist/*", "Uploading to PyPI")
+    print("\nUploading to PyPI...")
+    print("Running: python -m twine upload dist/*")
+    result = subprocess.run("python -m twine upload dist/*", shell=True)
+    return result.returncode == 0
 
 def main():
     """Main deployment function."""

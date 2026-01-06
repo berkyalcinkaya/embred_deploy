@@ -7,7 +7,6 @@ name = "embpred_deploy"
 version = "0.1.1"
 description = "Emb Deployment Package for Image Inference using Faster-RCNN and custom classification networks"
 readme = "README.md"
-license = {text = "MIT"}
 authors = [
     {name = "Berk Yalcinkaya", email = "berkyalc@stanford.edu"}
 ]
@@ -45,4 +44,7 @@ Issues = "https://github.com/berkyalcinkaya/embpred_deploy/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["embpred_deploy*"] 
+include = ["embpred_deploy*"]
+
+[tool.setuptools]
+license-files = [] 
