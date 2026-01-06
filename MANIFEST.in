@@ -2,4 +2,9 @@ include README.md
 include pyproject.toml
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
-recursive-exclude embpred_deploy/models *.pth *.pt 
+recursive-exclude * *.pth *.pt
+exclude build_and_deploy.py
+exclude requirements-dev.txt
+exclude test_api.py
+exclude test.jpeg
+exclude max_prob_classes.csv 
