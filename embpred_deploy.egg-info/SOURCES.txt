@@ -1,9 +1,7 @@
-LICENSE
 MANIFEST.in
 README.md
 pyproject.toml
 embpred_deploy/__init__.py
-embpred_deploy/api.py
 embpred_deploy/compress.py
 embpred_deploy/config.py
 embpred_deploy/install_weights.py

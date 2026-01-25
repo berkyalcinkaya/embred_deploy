@@ -20,7 +20,7 @@ class_mapping = {0: "t1", 1: "tPN", 2: "tPNf", 3: "t2", 4: "t3",
                 5: "t4", 6: "t5", 7: "t6", 8: "t7", 9: "t8", 10: "tM", 11: "tB", 12: "tEB", 13: "tEmpty"}
 
 SIZE = (224, 224)
-NCLASS = 13
+NCLASS = 14
 RCNN_PATH = os.path.join(MODELS_DIR, "rcnn.pt")
 
 def load_faster_RCNN_model_device(RCNN_PATH, use_GPU=True):
@@ -78,7 +78,7 @@ def inference(model, device,
         output = model(image).squeeze(0).cpu().numpy()
     
     if map_output or output_to_str:
-        output = torch.argmax(output).item()
+        output = np.argmax(output).item()
         if output_to_str:
             output = class_mapping[int(output)]
     return output

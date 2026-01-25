@@ -18,11 +18,36 @@ conda activate embd
 
 ### 2. Install `embpred_deploy` via pip
 
-Once the environment is set up, install the package:
+#### Standard Installation (with GPU support)
+
+The default installation includes PyTorch with CUDA support:
 
 ```bash
 pip install embpred_deploy
 ```
+
+#### CPU-Only Installation (lighter weight)
+
+For a lighter-weight CPU-only installation (recommended if you don't need GPU support):
+
+```bash
+# Install the package without PyTorch dependencies
+pip install embpred_deploy --no-deps
+
+# Install CPU-only PyTorch and torchvision
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining dependencies
+pip install opencv-python-headless>=4.5.0 numpy>=1.21.0 matplotlib>=3.3.0 tqdm>=4.60.0
+```
+
+Or as a one-liner:
+
+```bash
+pip install embpred_deploy --no-deps && pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install opencv-python-headless numpy matplotlib tqdm
+```
+
+**Note**: The CPU-only installation is significantly smaller (~200MB vs ~2GB+) and is sufficient if you're running inference on CPU only.
 
 **Important**: The PyPI package does not include model weights due to size limitations. You must download the model weights separately (see Model Weights Installation below).
 
@@ -127,12 +152,14 @@ embpred_deploy --F_neg15 /path/to/F_neg15.jpg --F0 /path/to/F0.jpg --F15 /path/t
 
 ### **Dependencies**
 The package requires the following libraries (installed via pip or Conda):
-- `pytorch`
-- `torchvision`
-- `opencv-python`
+- `pytorch` (or CPU-only version for lighter install)
+- `torchvision` (or CPU-only version for lighter install)
+- `opencv-python-headless`
 - `numpy`
 - `matplotlib`
 - `tqdm`
+
+**Note**: For CPU-only installations, use the CPU-only versions of PyTorch and torchvision as described in the Installation section above. This significantly reduces the package size.
 
 Ensure these dependencies are installed in your environment before running inference.
 
