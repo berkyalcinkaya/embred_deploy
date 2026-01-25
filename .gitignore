@@ -9,3 +9,8 @@ launch.json
 *.csv
 *.png
 *.npy
+# Build artifacts
+dist/
+*.whl
+*.egg-info/
+build/
