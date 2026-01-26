@@ -75,7 +75,7 @@ def inference(model, device,
     # Perform inference
     image = image.unsqueeze(0).to(device)
     model.eval()
-    with torch.no_grad():
+    with torch.inference_mode():
         output = model(image).squeeze(0).cpu().numpy()
     
     if map_output or output_to_str:

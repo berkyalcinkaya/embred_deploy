@@ -425,7 +425,7 @@ class CustomResNet18(nn.Module):
         # This step ensures compatibility if the ResNet architecture is altered
         dummy_input = torch.zeros(1, *input_shape)
         self.resnet.eval()
-        with torch.no_grad():
+        with torch.inference_mode():
             features = self.resnet(dummy_input)
             if isinstance(features, torch.Tensor):
                 feature_size = features.shape[1]

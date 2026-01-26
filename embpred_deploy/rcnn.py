@@ -21,15 +21,15 @@ def get_emb_frame_bbox(im_2D, model, device):
     ])
 
     image_tensor = transform(r_rgb).unsqueeze(0).to(device)
-    with torch.no_grad():
+    with torch.inference_mode():
         predictions = model(image_tensor)
-
-    best_bbox = None
-    best_score = 0
-    for bbox, score in zip(predictions[0]['boxes'], predictions[0]['scores']):
-        if score > best_score:
-            best_bbox = bbox
-            best_score = score
+        
+        best_bbox = None
+        best_score = 0
+        for bbox, score in zip(predictions[0]['boxes'], predictions[0]['scores']):
+            if score > best_score:
+                best_bbox = bbox
+                best_score = score
 
     if best_bbox is None:
         return 
