@@ -30,6 +30,7 @@ def load_faster_RCNN_model_device(RCNN_PATH, use_GPU=True):
         device = torch.device('cpu')
         
     model = torch.load(RCNN_PATH, map_location=device, weights_only=False)
+    model.eval()  # Set to inference mode
     return model, device
 
 
