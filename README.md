@@ -64,50 +64,77 @@ pip install -e .
 
 ## Model Weights Installation
 
-**⚠️ REQUIRED**: Pretrained model weights are NOT included in the PyPI package due to size limitations. You must download them separately to use the package.
+**⚠️ REQUIRED**: Pretrained model weights are **not** included in the PyPI package. You must download them separately to use the package.
 
-Model weights are stored on Google Drive. To use the latest trained models, download the weight files from:
+Model weights are stored in a **private AWS S3 bucket** named `cfai-model-weights`. You will need AWS credentials with permission to read from this bucket (ask the project maintainer for access).
 
-[Google Drive Weights](https://drive.google.com/file/d/1c-BJ0dvxzaZ4wMxMlhiRtwzURz7_ryaH/view?usp=sharing)
+### 1. Install the AWS CLI (securely)
 
-### Install Weights
+Follow the official AWS instructions for your platform (see the [AWS CLI installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)). Example commands:
 
-After downloading the zip file, run the installation script to extract and move the weight files into the appropriate `models` folder:
+### 2. Authenticate with AWS
+
+Configure your AWS credentials (access key, secret key, region) using:
 
 ```bash
-python -m embpred_deploy.install_weights /path/to/your/downloaded_weights.zip
+aws configure
 ```
 
-This script:
-- Unzips the archive
-- Moves any `.pth` or `.pt` files to the `embpred_deploy/models` directory
+You can also use environment variables or an existing AWS profile; the important part is that the configured identity has `s3:GetObject` access to the `cfai-model-weights` bucket.
 
-**Note**: The `embpred_deploy/models` directory will be created automatically if it doesn't exist.
+### 3. Download the model weights
+
+First, find the `models` directory used by `embpred_deploy`:
+
+```bash
+python -c "from embpred_deploy.config import MODELS_DIR; print(MODELS_DIR)"
+```
+
+Then download the desired model into that directory. For the model
+`New-ResNet50-Unfreeze-CE-embSplits-overUnderSampleMedian-lessregularized-nodropout-3layer256,128,64.pth`:
+
+```bash
+aws s3 cp \
+  "s3://cfai-model-weights/New-ResNet50-Unfreeze-CE-embSplits-overUnderSampleMedian-lessregularized-nodropout-3layer256,128,64.pth" \
+  /path/to/embpred_deploy/models/
+```
+
+Replace `/path/to/embpred_deploy/models/` with the path printed by the `MODELS_DIR` command above.
 
 ## Usage Instructions
 
-The inference script supports three modes:
+To see all available CLI arguments and options, run:
+
+```bash
+embpred_deploy --help
+```
+
+If you are working from the source repository, you can also run:
+
+```bash
+python -m embpred_deploy.main --help
+```
+
+The inference script supports three main modes:
 
 
 ### 1. **Timelapse Inference**
 
-Use the `--timelapse-dir` argument to process a sequence of images. This mode supports two directory structures:
+Use the `--timelapse-dir` argument to process a sequence of images. This mode supports:
 
-- **Single-image per timepoint**  
-  - All images are stored in one directory.
-  - Each image is loaded in grayscale and converted to RGB (duplicated channels).
-  
-- **Multiple focal depths per timepoint**  
-  - The images must be organized into **three subdirectories**, each representing a different focal depth.
-  - The script aligns images based on sorted filenames across subdirectories.
+- **Single image per timepoint**: all images in one directory (each loaded in grayscale and duplicated to RGB).
+- **Multiple focal depths per timepoint**: three subdirectories (each a focal depth); files are aligned by sorted filenames.
 
 #### Example Command:
 
 ```bash
-embpred_deploy --timelapse-dir /path/to/your/timelapse_data --model-name YOUR_MODEL_NAME
+embpred_deploy \
+  --timelapse-dir /path/to/timelapse_data \
+  --model-name New-ResNet50-Unfreeze-CE-embSplits-overUnderSampleMedian-lessregularized-nodropout-3layer256,128,64 \
+  --postprocess
 ```
 
-#### Output:
+Key outputs:
 - Raw outputs: `raw_timelapse_outputs.npy`
 - If `--postprocess` is enabled:
   - `max_prob_classes.csv`
@@ -121,7 +148,9 @@ Use the `--single-image` argument to run inference on a single image. The image 
 #### Example Command:
 
 ```bash
-embpred_deploy --single-image /path/to/your/image.jpg --model-name YOUR_MODEL_NAME
+embpred_deploy \
+  --single-image /path/to/image.jpg \
+  --model-name New-ResNet50-Unfreeze-CE-embSplits-overUnderSampleMedian-lessregularized-nodropout-3layer256,128,64
 ```
 
 
@@ -132,7 +161,11 @@ Provide three separate focal depth images using the `--F_neg15`, `--F0`, and `--
 #### Example Command:
 
 ```bash
-embpred_deploy --F_neg15 /path/to/F_neg15.jpg --F0 /path/to/F0.jpg --F15 /path/to/F15.jpg --model-name YOUR_MODEL_NAME
+embpred_deploy \
+  --F_neg15 /path/to/F_neg15.jpg \
+  --F0 /path/to/F0.jpg \
+  --F15 /path/to/F15.jpg \
+  --model-name New-ResNet50-Unfreeze-CE-embSplits-overUnderSampleMedian-lessregularized-nodropout-3layer256,128,64
 ```
 
 

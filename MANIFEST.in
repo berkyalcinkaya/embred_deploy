@@ -5,6 +5,7 @@ recursive-exclude * *.py[co]
 recursive-exclude * *.pth *.pt
 prune .vscode
 prune *.egg-info
+prune ~
 global-exclude .DS_Store
 global-exclude *.DS_Store
 global-exclude *.csv

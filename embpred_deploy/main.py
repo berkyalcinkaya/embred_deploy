@@ -159,6 +159,13 @@ def main():
         default=None,
         help="Optional path to the model file. If not provided, the path will be constructed from --model-name."
     )
+
+    parser.add_argument(
+        "--rcnn-path",
+        type=str,
+        default=None,
+        help="Optional path to the RCNN model file. If not provided, the default RCNN_PATH will be used."
+    )
     
     parser.add_argument(
         "--postprocess",
@@ -200,7 +207,8 @@ def main():
     model_path = args.model_path if args.model_path is not None else os.path.join(MODELS_DIR, f"{args.model_name}.pth")
     # Use the same device for RCNN model
     use_gpu = device.type == 'cuda'
-    rcnn_model, rcnn_device = load_faster_RCNN_model_device(RCNN_PATH, use_GPU=use_gpu)
+    rcnn_path = args.rcnn_path if args.rcnn_path is not None else RCNN_PATH
+    rcnn_model, rcnn_device = load_faster_RCNN_model_device(rcnn_path, use_GPU=use_gpu)
     model, epoch, best_val_auc = load_model(model_path, device, NCLASS, model_class=model_class, class_args=model_class_arg)
     
     outputs = []
