@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "embpred_deploy"
-version = "1.1.0"
+version = "1.1.1"
 description = "Emb Deployment Package for Image Inference using Faster-RCNN and custom classification networks"
 readme = "README.md"
 authors = [
