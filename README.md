@@ -169,6 +169,22 @@ embpred_deploy \
 ```
 
 
+## Output Files
+
+### Mode 1: Timelapse (`--timelapse-dir` or `--focal-depths`)
+
+This is the only mode that writes files. All files go into `--output-dir` (default = current working directory).
+
+| File | Format | Shape | What it is |
+| --- | --- | --- | --- |
+| `raw_timelapse_outputs.npy` | NumPy binary | `(T, 14)` float | The model's raw per-class scores at each timepoint `t`. Suitable for programmatic re-analysis. |
+| `raw_timelapse_outputs.csv` | CSV with header | `T+1 × 15` | Same data as the `.npy`, but human-readable: header is `timepoint,t1,tPN,tPNf,t2,…,tEmpty` and each row is one timepoint's class scores. |
+| `max_prob_classes.csv` | CSV with header | `T+1 × 3` | The predicted class per timepoint. Header: `timepoint,class_index,class_name`. With `--postprocess`, this is the monotonic-decoded sequence; without it, this is the per-timepoint raw argmax. |
+| `max_prob_classes.png` | PNG plot | — | Line plot of class index over time. Y-axis is labeled with class names (`t1`, `tPN`, …, `tEmpty`); X-axis is timepoint index. |
+| `postprocessed_timelapse_outputs.npy` | NumPy binary | `(T,)` int | Only written with `--postprocess`. The monotonic-decoded class index at each timepoint. |
+| `postprocessed_timelapse_outputs.csv` | CSV with header | `T+1 × 3` | Only written with `--postprocess`. Same data as the `.npy`, with `timepoint,class_index,class_name` columns. Effectively a copy of `max_prob_classes.csv` in this mode (kept separately so you always have the strict postprocessed sequence even if you change which sequence drives the plot). |
+
+
 ## Assumptions & Notes
 
 ### **Input Image Format**

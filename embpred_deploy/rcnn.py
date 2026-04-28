@@ -8,8 +8,25 @@ import torch.nn as nn
 def extract_emb_frame_2d(embframe, model, device):# what is return type of this function? 
     return ExtractEmbFrame(embframe, embframe, embframe, model, device)[0]
 
-def ExtractEmbFrame(r_channel, g_channel, b_channel, model, device):
-    bbox = get_emb_frame_bbox(g_channel, model, device)
+def ExtractEmbFrame(r_channel, g_channel, b_channel, model, device, fallback_size=(800, 800)):
+    # Try the green/F0 channel first; if the detector returns no bbox,
+    # fall back to the other focal depths one at a time before giving up.
+    bbox = None
+    for channel in (g_channel, r_channel, b_channel):
+        bbox = get_emb_frame_bbox(channel, model, device)
+        if bbox is not None:
+            break
+
+    if bbox is None:
+        # No focal depth produced a detection: resize the originals to
+        # fallback_size so downstream code always receives valid frames.
+        # Note: cv2.resize takes (width, height).
+        w, h = fallback_size
+        resized_r = cv2.resize(r_channel, (w, h))
+        resized_g = cv2.resize(g_channel, (w, h))
+        resized_b = cv2.resize(b_channel, (w, h))
+        return resized_r, resized_g, resized_b
+
     return crop_with_bbox(r_channel, g_channel, b_channel, bbox)
 
 def get_emb_frame_bbox(im_2D, model, device):

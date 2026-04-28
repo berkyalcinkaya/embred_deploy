@@ -15,6 +15,8 @@ launch.json
 dist/
 *.whl
 *.egg-info/
+max_prob_classes.csv
+max_prob_classes.png
 build/max_prob_classes.csv
 raw_timelapse_outputs.npy
 postprocessed_timelapse_outputs.npy

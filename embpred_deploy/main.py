@@ -1,4 +1,5 @@
 import os
+import csv
 import cv2
 import argparse
 import torch
@@ -57,7 +58,7 @@ def inference(model, device,
         assert rcnn_model is not None, "rcnn_model must be provided if get_bbox is True."
         assert totensor, "Image must be converted to a tensor if get_bbox is True."
         assert resize, "Image must be resized if get_bbox is True."
-        depths_ims = list(ExtractEmbFrame(depths_ims[0], depths_ims[1], depths_ims[2], rcnn_model, device))
+        depths_ims = list(ExtractEmbFrame(depths_ims[0], depths_ims[1], depths_ims[2], rcnn_model, device, fallback_size=size))
 
     if isinstance(depths_ims, List):
         image = np.stack(depths_ims, axis=-1)
@@ -291,22 +292,57 @@ def main():
         max_prob_csv_path = os.path.join(args.output_dir, "max_prob_classes.csv")
         max_prob_plot_path = os.path.join(args.output_dir, "max_prob_classes.png")
 
-        np.save(raw_outputs_path, np.array(outputs))
+        raw_outputs = np.array(outputs)
+        np.save(raw_outputs_path, raw_outputs)
         print(f"Raw outputs saved to {raw_outputs_path}")
+
+        # Save raw probabilities/logits as a CSV with medically-relevant
+        # class names as column headers (one row per timepoint).
+        ordered_class_names = [class_mapping[i] for i in range(NCLASS)]
+        raw_outputs_csv_path = os.path.join(args.output_dir, "raw_timelapse_outputs.csv")
+        with open(raw_outputs_csv_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["timepoint"] + ordered_class_names)
+            for t, row in enumerate(raw_outputs):
+                writer.writerow([t] + [f"{float(v):.6f}" for v in row])
+        print(f"Raw outputs (named) saved to {raw_outputs_csv_path}")
+
         if args.postprocess:
-            outputs = monotonic_decoding(np.array(outputs), loss='NLL')
-            print("Postprocessed outputs saved to postprocessed_timelapse_outputs.npy")
-        max_prob_classes = np.argmax(np.array(outputs), axis=1)
-        print(max_prob_classes)
-        np.savetxt(max_prob_csv_path, max_prob_classes, delimiter=",")
+            # monotonic_decoding returns class indices of shape (T,), not logits.
+            postprocessed_outputs = monotonic_decoding(raw_outputs, loss='NLL')
+            postprocessed_npy_path = os.path.join(args.output_dir, "postprocessed_timelapse_outputs.npy")
+            postprocessed_csv_path = os.path.join(args.output_dir, "postprocessed_timelapse_outputs.csv")
+            np.save(postprocessed_npy_path, postprocessed_outputs)
+            with open(postprocessed_csv_path, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["timepoint", "class_index", "class_name"])
+                for t, c in enumerate(postprocessed_outputs):
+                    writer.writerow([t, int(c), class_mapping[int(c)]])
+            print(f"Postprocessed outputs saved to {postprocessed_npy_path} and {postprocessed_csv_path}")
+            max_prob_classes = np.asarray(postprocessed_outputs, dtype=int)
+        else:
+            max_prob_classes = np.argmax(raw_outputs, axis=1).astype(int)
+        max_prob_class_names = [class_mapping[int(c)] for c in max_prob_classes]
+        print(max_prob_class_names)
+
+        # Write the per-timepoint predicted class with its medically-relevant
+        # name (and the integer index for programmatic use).
+        with open(max_prob_csv_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["timepoint", "class_index", "class_name"])
+            for t, c in enumerate(max_prob_classes):
+                writer.writerow([t, int(c), class_mapping[int(c)]])
         print(f"Max probability classes saved to {max_prob_csv_path}")
 
+        plt.figure()
         plt.plot(max_prob_classes)
-        plt.xlabel("Timepoints")
-        plt.ylabel("Max Probability Class")
-        plt.title("Max Probability Class Over Time")
-        plt.show()
+        plt.xlabel("Timepoint")
+        plt.ylabel("Class")
+        plt.yticks(list(range(NCLASS)), ordered_class_names)
+        plt.title("Predicted Class Over Time")
+        plt.tight_layout()
         plt.savefig(max_prob_plot_path)
+        plt.show()
         print(f"Plot saved to {max_prob_plot_path}")
     
     elif args.single_image:
