@@ -70,7 +70,7 @@ Model weights are stored in a **private AWS S3 bucket** named `cfai-model-weight
 
 ### 1. Install the AWS CLI (securely)
 
-Follow the official AWS instructions for your platform (see the [AWS CLI installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)). Example commands:
+Follow the official AWS instructions for your platform (see the [AWS CLI installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
 ### 2. Authenticate with AWS
 
